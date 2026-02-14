@@ -1,7 +1,29 @@
 use my_regex::Matcher;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Token {
+macro_rules! define_tokens {
+    ($tokenname:ident $tokentypename: ident $($variant:ident $(($associated:ident))?),+) => {
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        pub enum $tokenname {
+            $($variant $(($associated))?),+
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        pub enum $tokentypename {
+            $($variant),+
+        }
+
+        #[allow(unused_variables, non_snake_case)]
+        impl From<&$tokenname> for $tokentypename {
+            fn from(value: &$tokenname) -> Self {
+                match value {
+                    $($tokenname::$variant $(($associated))? => $tokentypename::$variant),+
+                }
+            }
+        }
+    }
+}
+
+define_tokens!(Token TokenType
     Unit,
     OpenParen,
     CloseParen,
@@ -41,9 +63,14 @@ pub enum Token {
     GreaterThanOrEqual,
     LessThanOrEqual,
     NotEqual,
-    Comma,
-}
+    Comma
+);
 impl Token {
+    pub fn are_same_type(&self, other: &Token) -> bool {
+        let tokentype: TokenType = self.into();
+        tokentype == other.into()
+    }
+
     fn find_match(mut chars: &str) -> Result<Option<(Token, usize)>, ()> {
         // NOTE: exceptional cases: int, assign, identifier, arrow, skip
 
